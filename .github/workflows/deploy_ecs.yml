@@ -13,26 +13,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Configure AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Build and Push Docker Image
         env:
-          ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
+          AWS_ECR_REGISTRY: ${{ secrets.AWS_ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo ${{ secrets.AWS_ACCESS_KEY_ID }} | docker login $ECR_REGISTRY --username AWS --password-stdin
-          docker buildx build --file Dockerfile --tag $ECR_REGISTRY/my-ecr-repo:$IMAGE_TAG --push .
+          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $AWS_ECR_REGISTRY
+          docker buildx build --file Dockerfile --tag $AWS_ECR_REGISTRY/my-ecr-repo:$IMAGE_TAG --push .
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: 1.0.9  # Replace with your desired Terraform version
-
-      - name: Configure AWS credentials
-        run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
 
       - name: Terraform Init
         run: terraform init
